@@ -1,0 +1,133 @@
+[
+    {
+        "id": "d4cba3ba.89b3d",
+        "type": "influxdb in",
+        "z": "c9c6b175.f0fe48",
+        "influxdb": "b50e85d1.fba35",
+        "name": "get last stored timestamp from influx",
+        "query": "SELECT last(power), time FROM test",
+        "rawOutput": false,
+        "precision": "",
+        "retentionPolicy": "",
+        "x": 490,
+        "y": 360,
+        "wires": [
+            [
+                "2c8da2b7.3f60be"
+            ]
+        ]
+    },
+    {
+        "id": "eee5b86.8fc0248",
+        "type": "inject",
+        "z": "c9c6b175.f0fe48",
+        "name": "trigger",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "repeat": "300",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "x": 400,
+        "y": 300,
+        "wires": [
+            [
+                "d4cba3ba.89b3d"
+            ]
+        ]
+    },
+    {
+        "id": "6e06e8cd.97a06",
+        "type": "debug",
+        "z": "c9c6b175.f0fe48",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 750,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "a3e39770.dd28e8",
+        "type": "http request",
+        "z": "c9c6b175.f0fe48",
+        "name": "crawl batch data from sensor",
+        "method": "GET",
+        "ret": "txt",
+        "paytoqs": true,
+        "url": "http://spool.goip.de/data?",
+        "tls": "",
+        "proxy": "",
+        "authType": "",
+        "x": 460,
+        "y": 480,
+        "wires": [
+            [
+                "f5df6c36.8986a",
+                "6e06e8cd.97a06"
+            ]
+        ]
+    },
+    {
+        "id": "2c8da2b7.3f60be",
+        "type": "function",
+        "z": "c9c6b175.f0fe48",
+        "name": "convert Time",
+        "func": "msg1 = {};\nvar d=0;\ntry\n{\nd = (new Date(msg.payload[0].time).getTime()/1000);\nd = Math.round(d);\n}\ncatch(e)\n{\n    d = 0;\n}\nmsg1.payload = { \"time\": d} ;\nreturn msg1;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 410,
+        "y": 420,
+        "wires": [
+            [
+                "a3e39770.dd28e8"
+            ]
+        ]
+    },
+    {
+        "id": "f5df6c36.8986a",
+        "type": "function",
+        "z": "c9c6b175.f0fe48",
+        "name": "create batch for influxdb",
+        "func": "var response = JSON.parse(msg.payload);\n\nvar data = [];\n\nvar item = {}\n\nvar len = response.data.length;\n\nfor (i=0; i<len;i++)\n{\n    item = {\n                \"measurement\" : \"test\",\n                \"fields\" : {\n                                \"power\" : response.data[i].POW\n                },\n                \"timestamp\" : new Date(response.data[i].TS * 1000)\n            }\n    data.push(item);\n}\n\n\nmsg.payload = data;\n\n\t\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 450,
+        "y": 540,
+        "wires": [
+            [
+                "6e06e8cd.97a06",
+                "c22bc6c4.94cc28"
+            ]
+        ]
+    },
+    {
+        "id": "c22bc6c4.94cc28",
+        "type": "influxdb batch",
+        "z": "c9c6b175.f0fe48",
+        "influxdb": "b50e85d1.fba35",
+        "precision": "",
+        "retentionPolicy": "",
+        "name": "write batch into influxdb",
+        "x": 450,
+        "y": 600,
+        "wires": []
+    },
+    {
+        "id": "b50e85d1.fba35",
+        "type": "influxdb",
+        "z": "",
+        "hostname": "192.168.0.214",
+        "port": "8086",
+        "protocol": "http",
+        "database": "test",
+        "name": "test",
+        "usetls": false,
+        "tls": ""
+    }
+]
